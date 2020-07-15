@@ -52,7 +52,7 @@ if [ "$BUILD_PX4" != "false" ]; then
         wget \
         ;
     # script directory
-    cd ${CATKIN_SRC}/px4_fast_planner/install
+    cd ${CATKIN_SRC}/mavros_apriltag_tracking/install
     DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
     # check requirements.txt exists (script not run in source tree)
