@@ -10,6 +10,7 @@ from std_srvs.srv import Empty, EmptyResponse
 from geometry_msgs.msg import Vector3, Point, PoseStamped
 from mavros_msgs.msg import PositionTarget, State
 from mavros_msgs.srv import CommandBool, SetMode
+from mavros_apriltag_tracking.srv import PIDGains, PIDGainsResponse
 
 class FCUModes:
     def __init__(self):
@@ -122,6 +123,36 @@ class PositionController:
 
         # Subscribe to drone FCU state
         rospy.Subscriber('mavros/state', State, self.cbFCUstate)
+
+        # Service for modifying horizontal PI controller gains 
+        rospy.Service('horizontal_controller/pid_gains', PIDGains, self.setHorizontalPIDCallback)
+        # Service for modifying vertical PI controller gains 
+        rospy.Service('vertical_controller/pid_gains', PIDGains, self.setVerticalPIDCallback)
+
+    def setHorizontalPIDCallback(self, req):
+        if req.p < 0. or req.i < 0.0:
+            rospy.logerr("Can not set negative PID gains.")
+            return []
+
+        self.kP_xy_ = req.p
+        self.kI_xy_ = req.i
+
+        rospy.loginfo("Horizontal controller gains are set to P=%s I=%s", self.kP_xy_, self.kI_xy_)
+
+        return []
+
+    def setVerticalPIDCallback(self, req):
+        if req.p < 0. or req.i < 0.0:
+            rospy.logerr("Can not set negative PID gains.")
+            return []
+
+        self.kP_z_ = req.p
+        self.kI_z_ = req.i
+
+        rospy.loginfo("Vertical controller gains are set to P=%s I=%s", self.kP_z_, self.kI_z_)
+
+        return []
+
 
     def cbFCUstate(self, msg):
         if msg.armed and msg.mode == 'OFFBOARD' :
