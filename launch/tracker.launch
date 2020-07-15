@@ -1,0 +1,49 @@
+<launch>
+
+    <!-- Set to true to track-->
+    <arg name="track_tag" default="true"/>
+
+    <!-- IMPORTANT. TF from drone to camera frames assuming camera is static-->
+    <node pkg="tf" type="static_transform_publisher" name="tf_drone_to_camera" args="0.1 0 -0.1 -1.57 0 -3.1415 base_link cgo3_camera_optical_frame 33"/>
+
+    <include file="$(find mavros_apriltag_tracking)/launch/mavros.launch"/>
+    <include file="$(find mavros_apriltag_tracking)/launch/continuous_detection.launch"/>
+
+    <!-- Position controller -->
+    <node pkg="mavros_apriltag_tracking" name="mavros_offboard_controller_node" type="mavros_offboard_controller.py" output="screen">
+        <!-- Lateral controller gains -->
+        <param name="horizontal_controller/kP" value="1.0"/>
+        <param name="horizontal_controller/kI" value="0.01"/>
+
+        <!-- Vertical controller gains -->
+        <param name="vertical_controller/kP" value="2.0"/>
+        <param name="vertical_controller/kI" value="0.01"/>
+
+        <!-- Maximum horizontal vlocity magnitude -->
+        <param name="horizontal_controller/vMAX" value="1.0"/>
+        <!-- Maximum verical vlocity magnitude -->
+        <param name="vertical_controller/vUpMAX" value="1.0"/>
+        <param name="vertical_controller/vDownMAX" value="0.5"/>
+    </node>
+
+    <!-- Tag setpoint publisher 
+        Takes pose of detected tag and publishes corresponding relative position setpoints to the controller
+    -->
+    <node if="$(arg track_tag)" pkg="mavros_apriltag_tracking" name="apriltag_setpoint_publisher_node" type="apriltag_setpoint_publisher.py" output="screen">
+        <!-- Desired tag id to be tracked -->
+        <param name="tag_id" value="0"/>
+        <!-- Drone's frame name for transformation-->
+        <param name="drone_frame_id" value="/base_link"/>
+        <!-- Tag's frame name for transformation-->
+        <param name="tag_frame_id" value="/tag_0"/>
+        <!-- Topics on which tags poses are published -->
+        <param name="tags_topic" value="tag_detections"/>
+        <!-- Controller setpoint topic-->
+        <param name="setpoint_topic" value="setpoint/relative_pos"/>
+        <!-- Desired alttitude above tag in meters. Should be positive-->
+        <param name="alt_from_tag" value="3.0"/>
+    </node>
+
+    <!-- Rviz -->
+    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find mavros_apriltag_tracking)/rviz/rviz.rviz" />
+</launch>
