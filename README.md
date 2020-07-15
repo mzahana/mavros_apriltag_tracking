@@ -59,3 +59,33 @@ There are 2 ROS nodes in this package.
     * Position setpoints in local fixed frame. Corresponding topic is `/setpoint/local_pos`
     * Position setpoints relative to the drone horizontal body frame. This one is used for the tag tracking as the tag is detected relative to the camera. Corresponding topic is `/setpoint/relative_pos`
 * **`apriltag_setpoint_publisher.py`**: This node takes the pose of the detected tag and computes relative positino setpoints which are published to `/setpoint/relative_pos` topic.
+
+# Tuning
+The position controller may require tuning for the PI gains. There are two services to help you tune those gains in runtime, for both horizontal and verical controllers.
+
+To tune the PI gains for the horizontal controller,
+```sh
+rosservice call /horizontal_controller/pid_gains "p: 1.0
+i: 0.01
+d: 0.0"
+```
+for the verical controller,
+```sh
+rosservice call /vertical_controller/pid_gains "p: 1.0
+i: 0.01
+d: 0.0"
+```
+
+Error signals are also published to the following topics. This helps you to plot the error response while tuning the controllers.
+
+```sh
+# Velocity errors help you to tune the velocity controller on PX4 side
+/analysis/body_vel_err
+/analysis/local_vel_err
+
+# Position errors help you to tune the position controllers implemented in this package
+/analysis/local_pos_err
+/analysis/relative_pos_err
+```
+
+You can use `rqt_plot` or `plotjuggler` to plot signals in realtime.
