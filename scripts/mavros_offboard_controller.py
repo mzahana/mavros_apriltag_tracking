@@ -7,7 +7,7 @@ import tf
 from math import pi, sqrt
 from std_msgs.msg import Float32
 from std_srvs.srv import Empty, EmptyResponse
-from geometry_msgs.msg import Vector3, Point, PoseStamped
+from geometry_msgs.msg import Vector3, Point, PoseStamped, TwistStamped, PointStamped
 from mavros_msgs.msg import PositionTarget, State
 from mavros_msgs.srv import CommandBool, SetMode
 from mavros_apriltag_tracking.srv import PIDGains, PIDGainsResponse
@@ -212,10 +212,16 @@ class Commander:
         # Position setpoint by user
         self.pos_setpoint_ = Point()
 
+        # Current local velocity
+        self.local_vel_ = TwistStamped()
+
+        # Current body velocity
+        self.body_vel_ = TwistStamped()
+
         # Yaw setpoint by user (degrees); will be converted to radians before it's published
         self.yaw_setpoint_ = 0.0
 
-        # Current drone position
+        # Current drone position (local frame)
         self.drone_pos_ = Point()
 
         # FCU modes
@@ -236,6 +242,12 @@ class Commander:
         # Subscriber to current drone's position
         rospy.Subscriber('mavros/local_position/pose', PoseStamped, self.dronePosCallback)
 
+        # Subscriber to body velocity
+        rospy.Subscriber('mavros/local_position/velocity_body', TwistStamped, self.bodyVelCallback)
+
+        # Subscriber to local velocity
+        rospy.Subscriber('mavros/local_position/velocity_local', TwistStamped, self.localVelCallback)
+
         # Service for arming and setting OFFBOARD flight mode
         rospy.Service('arm_and_offboard', Empty, self.armAndOffboard)
 
@@ -252,6 +264,12 @@ class Commander:
 
     #     self.setLocalPositionMask()
     #     return EmptyResponse()
+
+    def bodyVelCallback(self, msg):
+        self.body_vel_ = msg
+
+    def localVelCallback(self, msg):
+        self.local_vel_ = msg
 
     def autoLand(self, req):
         self.fcu_mode_.setAutoLandMode()
@@ -365,10 +383,10 @@ class Tracker:
         # set False for relative target tracking
         self.local_tracking_ = None
 
-        # Commander object
+        # Commander object to send velocity setpoints to FCU
         self.commander_ = Commander()
 
-        # Controller object
+        # Controller object to calculate velocity commands
         self.controller_ = PositionController()
 
         # Subscriber for user setpoints (local position)
@@ -376,6 +394,18 @@ class Tracker:
 
         # Subscriber for user setpoints (relative position)
         rospy.Subscriber('setpoint/relative_pos', Point, self.relativePosSpCallback)
+
+        # Publisher for velocity errors in body frame
+        self.bodyVel_err_pub_ = rospy.Publisher('analysis/body_vel_err', PointStamped, queue_size=10)
+
+        # Publisher for velocity errors in local frame
+        self.localVel_err_pub_ = rospy.Publisher('analysis/local_vel_err', PointStamped, queue_size=10)
+
+        # Publisher for position errors in local frame
+        self.localPos_err_pub_ = rospy.Publisher('analysis/local_pos_err', PointStamped, queue_size=10)
+
+        # Publisher for position error between drone and target
+        self.relativePos_err_pub_ = rospy.Publisher('analysis/relative_pos_err', PointStamped, queue_size=10)
 
     def computeControlOutput(self):
         if self.local_tracking_:
@@ -413,6 +443,51 @@ class Tracker:
             self.controller_.resetIntegrators()
             self.local_tracking_ = False
 
+    def publishErrorSignals(self):
+        """
+        Publishes all error signals for debugging and tuning
+        """
+
+        # Local velocity errors
+        localVelErr_msg = PointStamped()
+        localVelErr_msg.header.stamp = rospy.Time.now()
+        localVelErr_msg.point.x = self.commander_.setpoint_.velocity.x - self.commander_.local_vel_.twist.linear.x
+        localVelErr_msg.point.y = self.commander_.setpoint_.velocity.y - self.commander_.local_vel_.twist.linear.y
+        localVelErr_msg.point.z = self.commander_.setpoint_.velocity.z - self.commander_.local_vel_.twist.linear.z
+        
+        self.localVel_err_pub_.publish(localVelErr_msg)
+
+        # Body velocity errors
+        # this message uses convention of +x-right, +y-forward, +z-up
+        # the setpoint msg follows the same convention
+        # However, the feedback signal (actual body vel from mavros) follows +x-forward, +y-left, +z-up
+        # Required conversion is done below
+        bodyVelErr_msg = PointStamped()
+        bodyVelErr_msg.header.stamp = rospy.Time.now()
+        bodyVelErr_msg.point.x = self.commander_.setpoint_.velocity.x - (-self.commander_.body_vel_.twist.linear.y)
+        bodyVelErr_msg.point.y = self.commander_.setpoint_.velocity.y - self.commander_.body_vel_.twist.linear.x
+        bodyVelErr_msg.point.z = self.commander_.setpoint_.velocity.z - self.commander_.body_vel_.twist.linear.z
+
+        self.bodyVel_err_pub_.publish(bodyVelErr_msg)
+
+        # Local position errors
+        localPosErr_msg = PointStamped()
+        localPosErr_msg.header.stamp = rospy.Time.now()
+        localPosErr_msg.point.x = self.local_xSp_ - self.commander_.drone_pos_.x
+        localPosErr_msg.point.y = self.local_ySp_ - self.commander_.drone_pos_.y
+        localPosErr_msg.point.z = self.local_zSp_ - self.commander_.drone_pos_.z
+
+        self.localPos_err_pub_.publish(localPosErr_msg)
+
+        # Relative position errors
+        relPosErr_msg = PointStamped()
+        relPosErr_msg.header.stamp = rospy.Time.now()
+        relPosErr_msg.point.x = self.relative_xSp_
+        relPosErr_msg.point.y = self.relative_ySp_
+        relPosErr_msg.point.z = self.relative_zSp_
+
+        self.relativePos_err_pub_.publish(relPosErr_msg)
+
 if __name__ == '__main__':
     rospy.init_node('Offboard_control_node', anonymous=True)
     
@@ -440,5 +515,6 @@ if __name__ == '__main__':
         """
         tracker.computeControlOutput()
         tracker.commander_.publishSetpoint()
+        tracker.publishErrorSignals()
         #cmd.publishSetpoint()
         loop.sleep()
