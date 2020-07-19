@@ -13,7 +13,7 @@
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license> BSD-3-Clause License </license>
+  <license> BSD-3-Clause License</license>
 
 
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
@@ -67,6 +67,13 @@
 
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
+
+  <build_depend>geometry_msgs</build_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <build_depend> eigen_catkin</build_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

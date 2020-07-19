@@ -31,7 +31,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  """
 import rospy
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PoseStamped, PoseWithCovarianceStamped
 import tf
 from apriltag_ros.msg import AprilTagDetectionArray
 
@@ -57,7 +57,23 @@ class SetpointPublisher:
         # Relative setpoint publisher
         self.setpoint_pub_ = rospy.Publisher(self.setpoint_topic_, Point, queue_size=10)
 
+        # Relative pose publisher as PoseStamped
+        self.pose_pub_ = rospy.Publisher('tag/pose', PoseStamped, queue_size=10)
+
+        # Subscriber to Kalman filter estimate
+        rospy.Subscriber("kf/estimate", PoseWithCovarianceStamped, self.kfCallback)
+
         rospy.Subscriber(self.tags_topic_, AprilTagDetectionArray, self.tagsCallback)
+
+    def kfCallback(self, msg):
+        ex = -msg.pose.pose.position.y #-trans[1]
+        ey = msg.pose.pose.position.x #trans[0]
+        ez = msg.pose.pose.position.z + self.alt_from_tag_
+        sp_msg = Point()
+        sp_msg.x = ex
+        sp_msg.y = ey
+        sp_msg.z = ez
+        self.setpoint_pub_.publish(sp_msg)
 
     # tags callback
     def tagsCallback(self, msg):
@@ -67,27 +83,39 @@ class SetpointPublisher:
             for tag in msg.detections: 
                 if tag.id[0] == self.tag_id_: # deired tag_id
                     try:
-                        (trans,_) = self.tf_listener_.lookupTransform(self.drone_frame_id_, self.tag_frame_id_, rospy.Time(0))
+                        (trans,rot) = self.tf_listener_.lookupTransform(self.drone_frame_id_, self.tag_frame_id_, rospy.Time(0))
                         valid = True
                     except :
                         rospy.logwarn("No valid TF for the required tag %s", self.tag_id_)
                         return
-        if valid:
+        if valid: # Publish relative setpoint
             # for debug
             #rospy.loginfo("Tag %s is x=%s , y=%s , z =%s away from the drone", self.tag_id_, trans[0], trans[1], trans[2])
             
             # compute error in drone frame
             # The one we get in trans is x-forward, y-left, z-up
             # the one we should send is x-right, y-forward, z-up
-            ex = -trans[1]
-            ey = trans[0]
-            ez = trans[2] + self.alt_from_tag_
-            sp_msg = Point()
-            sp_msg.x = ex
-            sp_msg.y = ey
-            sp_msg.z = ez
-            self.setpoint_pub_.publish(sp_msg)
-        else: # Publish relative setpoint
+            # ex = -trans[1]
+            # ey = trans[0]
+            # ez = trans[2] + self.alt_from_tag_
+            # sp_msg = Point()
+            # sp_msg.x = ex
+            # sp_msg.y = ey
+            # sp_msg.z = ez
+            # self.setpoint_pub_.publish(sp_msg)
+
+            pose_msg = PoseStamped()
+            pose_msg.header.frame_id = self.drone_frame_id_
+            pose_msg.header.stamp = rospy.Time.now()
+            pose_msg.pose.position.x = trans[0]
+            pose_msg.pose.position.y = trans[1]
+            pose_msg.pose.position.z = trans[2]
+            pose_msg.pose.orientation.x = rot[0]
+            pose_msg.pose.orientation.y = rot[1]
+            pose_msg.pose.orientation.z = rot[2]
+            pose_msg.pose.orientation.w = rot[3]
+            self.pose_pub_.publish(pose_msg)
+        else: 
             pass
                 
 

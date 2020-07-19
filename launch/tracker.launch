@@ -44,6 +44,17 @@
         <param name="alt_from_tag" value="3.0"/>
     </node>
 
+    <!-- KF tracker-->
+    <node pkg="mavros_apriltag_tracking" name="kf_tracker_node" type="kf_tracker_node" output="screen">
+        <remap from="measurement/pose" to="tag/pose"/>
+        <param name="dt_pred" value="0.05"/> <!-- rate of prediction step -->
+        <param name="do_kf_update_step" value="true"/> <!-- IMPRTANT keep true-->
+        <param name="q_std" value="1.0"/> <!-- Standard deviation of the process noise-->
+        <param name="r_std" value="0.1"/> <!-- Standard deviation of the observation noise-->
+        <param name="measurement_off_time" value="2.0"/> <!-- Maximum time (seconds) with no measurement before stopping the filter -->
+        <param name="print_debug_msg" value="false"/>
+    </node>
+
     <!-- Rviz -->
     <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find mavros_apriltag_tracking)/rviz/rviz.rviz" />
 </launch>
