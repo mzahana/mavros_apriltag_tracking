@@ -52,7 +52,19 @@ sudo cp ~/catkin_ws/src/mavros_apriltag_tracking/models/custom_husky/husky.urdf.
     rosservice call /arm_and_offboard "{}"
     ```
 
-You should see the drone first moves close to the tag. Then, once the tag is detected, the drone will be automatically controlled to hover above the tag.
+You should see the drone taking off. Then, once the tag on the Husky UGV is detected, the drone will be automatically controlled to hover above the tag. The dron will keep tracking the tag on top of the Husky while it's moving.
+
+To move the Husky around, publish a linear velocity (along forward direction of the Husky's `x-axis`), and a rotational velocity about the Husky's `z-axis` as follows.
+```sh
+rostopic pub -r 10 /husky_velocity_controller/cmd_vel geometry_msgs/Twist "linear:
+  x: 1.0
+  y: 0.0
+  z: 0.0
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.4"
+```
 
 Look at the `launch/tracker.launch` file and change parameters as needed.
 
