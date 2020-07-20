@@ -1,5 +1,5 @@
 # mavros_apriltag_tracking
-This package uses apriltag_ros for tag detection and an implementaiton of a position controller to track the tag with respect to the drone.
+This package allows a PX4-powered drone to track a moving target (an AprilTag in this case) which is detected by a camera. Tag detection is done using `apriltag_ros` package. The target's position and velocity estimation is done using an implementaion of a Kalman filter based on a constant velocity model. The drone is controllerd using an implementation of a position controller which sends velocity commands to PX4. The detection and control are done with respect to the drone frame. So, errors caused by drifts in the local fixed frame can be avoided.
 
 **Kindly, give this repo a STAR if it helps you in your work**
 
