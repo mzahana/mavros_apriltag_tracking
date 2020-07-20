@@ -76,7 +76,7 @@ angular:
 Look at the `launch/tracker.launch` file and change parameters as needed.
 
 # Nodes
-There are 2 ROS nodes in this package.
+The following are the ROS nodes in this package.
 * **`mavros_offboard_controller.py`**: Mainly implements a position controller and sends velocity commands to PX4. This controller accepts two types of position setpoints.
     * Position setpoints in local fixed frame. Corresponding topic is `/setpoint/local_pos`
     * Position setpoints relative to the drone horizontal body frame. This one is used for the tag tracking as the tag is detected relative to the camera. Corresponding topic is `/setpoint/relative_pos`
