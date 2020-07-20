@@ -1,5 +1,12 @@
 # mavros_apriltag_tracking
 This package uses apriltag_ros for tag detection and an implementaiton of a position controller to track the tag with respect to the drone.
+
+**Kindly, give this repo a STAR if it helps you in your work**
+
+Video:
+
+[![mavros_apriltag_tracking](https://img.youtube.com/vi/5bqOWKYBr0k/0.jpg)](https://youtu.be/5bqOWKYBr0k "mavros_apriltag_tracking")
+
 # Installation
 This package is tested on Ubuntu 18 + ROS Melodic
 
