@@ -37,8 +37,11 @@ grep -xF 'source '${HOME}'/catkin_ws/devel/setup.bash' ${HOME}/.bashrc || echo "
 # Install mavros
 sudo apt-get install ros-$ROS_DISTRO-mavros ros-$ROS_DISTRO-mavros-extras -y
 
+# Installing Husky simulation packages
+sudo apt-get install ros-$ROS_DISTRO-husky-desktop ros-$ROS_DISTRO-husky-simulator -y
+
 # Install apriltag_ros
-sudo apt-get install ros-$ROS_DISTRO-apriltag-ros
+sudo apt-get install ros-$ROS_DISTRO-apriltag-ros -y
 
 ####################################### Setup PX4 v1.10.1 #######################################
 if [ "$BUILD_PX4" != "false" ]; then

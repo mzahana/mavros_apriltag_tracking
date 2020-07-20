@@ -15,9 +15,12 @@ This package is tested on Ubuntu 18 + ROS Melodic
     ```
 * Copy the modified `typhoon_h480` model to `/home/arrow/Firmware/Tools/sitl_gazebo/models`
     ```sh
-    ~/catkin_ws/src/mavros_apriltag_tracking/models
-    cp -R ~/catkin_ws/src/mavros_apriltag_tracking/models/typhoon_h480 ~/Firmware/Tools/sitl_gazebo/models/
+    cp -R ~/catkin_ws/src/mavros_apriltag_tracking/models/typhoon_h480 ~/Firmware/Tools/sitl_gazebo/models/husky.urdf.xacro 
     ```
+* Copy the modified Husky simulation model. **You need sudo for this one**
+```sh
+sudo cp ~/catkin_ws/src/mavros_apriltag_tracking/models/custom_husky/husky.urdf.xacro $(catkin_find husky_description/urdf)/
+```
 # Simulation
 * Use the `launch/tracker.launch` file to run the simulation
     ```sh
@@ -25,8 +28,8 @@ This package is tested on Ubuntu 18 + ROS Melodic
     ```
 * Bring the drone above and close to the tag by publishing one message to the `/setpoint/local_pos` 
     ```sh
-    rostopic pub --once /setpoint/local_pos geometry_msgs/Point "x: 1.0
-    y: -1.0
+    rostopic pub --once /setpoint/local_pos geometry_msgs/Point "x: 0.0
+    y: 0.0
     z: 3.0"
     ```
 * Make the camera face downward (pitch rotation of -90 degrees)
@@ -59,6 +62,7 @@ There are 2 ROS nodes in this package.
     * Position setpoints in local fixed frame. Corresponding topic is `/setpoint/local_pos`
     * Position setpoints relative to the drone horizontal body frame. This one is used for the tag tracking as the tag is detected relative to the camera. Corresponding topic is `/setpoint/relative_pos`
 * **`apriltag_setpoint_publisher.py`**: This node takes the pose of the detected tag and computes relative positino setpoints which are published to `/setpoint/relative_pos` topic.
+* **`kf_tracker_node`**: Performs Kalman filtering based on a constant velocity model for object tracking. The input to this node is a PoseStamped topic of the object pose measurements (only the 3D position is consumed). The output of the filter (`kf/estimate` topic) is an estimate of the 3D position of the tracked object in the same frame as the input measrements.
 
 # Tuning
 The position controller may require tuning for the PI gains. There are two services to help you tune those gains in runtime, for both horizontal and verical controllers.
