@@ -6,6 +6,7 @@
     <!-- MAVROS configs -->
     <arg name="fcu_url" default="udp://:14540@localhost:14557"/>
     <arg name="respawn_mavros" default="false"/>
+    <arg name="gazebo_world" default="$(find mavros_apriltag_tracking)/worlds/apriltag.world"/>
 
 
     <group if="$(arg use_gazebo)" >
@@ -29,7 +30,7 @@
         <!-- vehicle model and world -->
         <arg name="est" default="ekf2"/>
         <arg name="vehicle" default="typhoon_h480"/>
-        <arg name="world" default="$(find mavros_apriltag_tracking)/worlds/apriltag.world"/>
+        <arg name="world" value="$(arg gazebo_world)"/>
         <arg name="sdf" default="$(find mavlink_sitl_gazebo)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
 
         <!-- PX4 SITL configs -->

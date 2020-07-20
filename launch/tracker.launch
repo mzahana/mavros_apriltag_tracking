@@ -3,24 +3,29 @@
     <!-- Set to true to track-->
     <arg name="track_tag" default="true"/>
 
-    <!-- IMPORTANT. TF from drone to camera frames assuming camera is static-->
-    <node pkg="tf" type="static_transform_publisher" name="tf_drone_to_camera" args="0.1 0 -0.1 -1.57 0 -3.1415 base_link cgo3_camera_optical_frame 33"/>
+    <arg name="drone_frame" default="drone_link"/>
 
-    <include file="$(find mavros_apriltag_tracking)/launch/mavros.launch"/>
+    <!-- IMPORTANT. TF from drone to camera frames assuming camera is static-->
+    <node pkg="tf" type="static_transform_publisher" name="tf_drone_to_camera" args="0.1 0 -0.1 -1.57 0 -3.1415 $(arg drone_frame) cgo3_camera_optical_frame 33"/>
+
+    <include file="$(find mavros_apriltag_tracking)/launch/mavros.launch">
+        <arg name="gazebo_world" value="$(find mavros_apriltag_tracking)/worlds/empty.world"/>
+    </include>
+
     <include file="$(find mavros_apriltag_tracking)/launch/continuous_detection.launch"/>
 
     <!-- Position controller -->
     <node pkg="mavros_apriltag_tracking" name="mavros_offboard_controller_node" type="mavros_offboard_controller.py" output="screen">
         <!-- Lateral controller gains -->
-        <param name="horizontal_controller/kP" value="1.0"/>
-        <param name="horizontal_controller/kI" value="0.01"/>
+        <param name="horizontal_controller/kP" value="1.3"/>
+        <param name="horizontal_controller/kI" value="0.02"/>
 
         <!-- Vertical controller gains -->
         <param name="vertical_controller/kP" value="2.0"/>
         <param name="vertical_controller/kI" value="0.01"/>
 
         <!-- Maximum horizontal vlocity magnitude -->
-        <param name="horizontal_controller/vMAX" value="1.0"/>
+        <param name="horizontal_controller/vMAX" value="2.0"/>
         <!-- Maximum verical vlocity magnitude -->
         <param name="vertical_controller/vUpMAX" value="1.0"/>
         <param name="vertical_controller/vDownMAX" value="0.5"/>
@@ -33,7 +38,7 @@
         <!-- Desired tag id to be tracked -->
         <param name="tag_id" value="0"/>
         <!-- Drone's frame name for transformation-->
-        <param name="drone_frame_id" value="/base_link"/>
+        <param name="drone_frame_id" value="/$(arg drone_frame)"/>
         <!-- Tag's frame name for transformation-->
         <param name="tag_frame_id" value="/tag_0"/>
         <!-- Topics on which tags poses are published -->
@@ -43,6 +48,29 @@
         <!-- Desired alttitude above tag in meters. Should be positive-->
         <param name="alt_from_tag" value="3.0"/>
     </node>
+
+    <!-- KF tracker-->
+    <node pkg="mavros_apriltag_tracking" name="kf_tracker_node" type="kf_tracker_node" output="screen">
+        <remap from="measurement/pose" to="tag/pose"/>
+        <param name="tracking_frame_id" value="$(arg drone_frame)"/>
+        <param name="dt_pred" value="0.05"/> <!-- rate of prediction step -->
+        <param name="do_kf_update_step" value="true"/> <!-- IMPRTANT keep true-->
+        <param name="q_std" value="1.0"/> <!-- Standard deviation of the process noise-->
+        <param name="r_std" value="0.1"/> <!-- Standard deviation of the observation noise-->
+        <param name="measurement_off_time" value="2.0"/> <!-- Maximum time (seconds) with no measurement before stopping the filter -->
+        <param name="print_debug_msg" value="false"/>
+    </node>
+
+
+    <arg name="husky_laser_enabled" default="true"/>
+    <arg name="husky_kinect_enabled" default="false"/>
+
+    <include file="$(find husky_gazebo)/launch/spawn_husky.launch">
+        <arg name="x" value="2.0"/>
+        <arg name="y" value="2.0"/>
+        <arg name="laser_enabled" value="$(arg husky_laser_enabled)"/>
+        <arg name="kinect_enabled" value="$(arg husky_kinect_enabled)"/>
+    </include>
 
     <!-- Rviz -->
     <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find mavros_apriltag_tracking)/rviz/rviz.rviz" />
