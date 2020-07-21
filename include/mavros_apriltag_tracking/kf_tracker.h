@@ -101,6 +101,9 @@ private:
 
    bool debug_; /**< for printing debug message */
 
+   bool use_constant_accel_model_; /**< Using transition and process noise cov matrices for constant acceleration model */
+   bool use_pos_and_vel_observations_; /**< Set true if observing position and velocity. */
+
    /**
     * @brief Computes estimate covariance Q based on sampling time dt_pred_ and  process noise q_.
     */

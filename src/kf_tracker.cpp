@@ -43,6 +43,8 @@ state_buffer_size_(40),
 tracking_frame_("base_link"),
 do_update_step_(true),
 measurement_off_time_(2.0),
+use_constant_accel_model_(false),
+use_pos_and_vel_observations_(false),
 debug_(false)
 {
    nh_private_.param<double>("dt_pred", dt_pred_, 0.05);
@@ -56,6 +58,8 @@ debug_(false)
    nh_private.param<bool>("do_kf_update_step", do_update_step_, true);
    nh_private.param<double>("measurement_off_time", measurement_off_time_, 2.0);
    nh_private.param<bool>("print_debug_msg", debug_, false);
+   nh_private.param<bool>("use_constant_accel_model", use_constant_accel_model_, false);
+   nh_private.param<bool>("use_pos_and_vel_observations", use_pos_and_vel_observations_, false);
 
    initKF();
 
@@ -73,51 +77,103 @@ KFTracker::~KFTracker()
 
 void KFTracker::setQ(void)
 {
-   // This is for constant velocity model \in R^3
 
-   Q_.resize(6,6);
-   Q_ = Eigen::MatrixXd::Zero(6,6);
-   Q_(0,0) = 1./3.*dt_pred_*dt_pred_*dt_pred_; // x with x
-   Q_(0,3) = 0.5*dt_pred_*dt_pred_; // x with vx
-   Q_(1,1) = 1./3.*dt_pred_*dt_pred_*dt_pred_; // y with y
-   Q_(1,4) = 0.5*dt_pred_*dt_pred_; // y with vy
-   Q_(2,2) = 1./3.*dt_pred_*dt_pred_*dt_pred_; // z with z
-   Q_(2,5) = 0.5*dt_pred_*dt_pred_; // z with vz
-   Q_(3,0) = Q_(0,3); // vx with x. Symmetric
-   Q_(3, 3) = dt_pred_; // vx with vx
-   Q_(4,1) = Q_(1,4); // vy with y. Symmetric
-   Q_(4,4) = dt_pred_; // vy with vy
-   Q_(5,2) = Q_(2,5); // vz with z. Symmetric
-   Q_(5,5) = dt_pred_; // vz with vz
+   if(use_constant_accel_model_)
+   {
+      // This is for constant acceleration model \in R^3
+      Eigen::MatrixXd block11 = std::pow(dt_pred_,5)/20.0 * Eigen::MatrixXd::Identity(3,3);
+      Eigen::MatrixXd block12 = std::pow(dt_pred_,4)/8.0 * Eigen::MatrixXd::Identity(3,3);
+      Eigen::MatrixXd block13 = std::pow(dt_pred_,3)/6.0 * Eigen::MatrixXd::Identity(3,3);
+      Eigen::MatrixXd block22 = std::pow(dt_pred_,3)/3.0 * Eigen::MatrixXd::Identity(3,3);
+      Eigen::MatrixXd block23 = dt_pred_*dt_pred_/2.0 * Eigen::MatrixXd::Identity(3,3);
+      Eigen::MatrixXd block33 = dt_pred_ * Eigen::MatrixXd::Identity(3,3);
+
+      Q_.resize(9,9);
+      Q_.block<3,4>(0,0) = block11;
+      Q_.block<3,3>(0,3) = block12;
+      Q_.block<3,3>(0,6) = block13;
+      Q_.block<3,3>(3,3) = block22;
+      Q_.block<3,3>(3,6) = block23;
+      Q_.block<3,3>(6,6) = block33;
+      // the remaining blocks are symmetric
+      Q_.block<3,3>(3,0) = block12;
+      Q_.block<3,3>(6,0) = block13;
+      Q_.block<3,3>(6,3) = block23;
+   }
+
+   else
+   {
+      // This is for constant velocity model \in R^3
+      Q_.resize(6,6);
+      Q_ = Eigen::MatrixXd::Zero(6,6);
+      Q_(0,0) = 1./3.*dt_pred_*dt_pred_*dt_pred_; // x with x
+      Q_(0,3) = 0.5*dt_pred_*dt_pred_; // x with vx
+      Q_(1,1) = 1./3.*dt_pred_*dt_pred_*dt_pred_; // y with y
+      Q_(1,4) = 0.5*dt_pred_*dt_pred_; // y with vy
+      Q_(2,2) = 1./3.*dt_pred_*dt_pred_*dt_pred_; // z with z
+      Q_(2,5) = 0.5*dt_pred_*dt_pred_; // z with vz
+      Q_(3,0) = Q_(0,3); // vx with x. Symmetric
+      Q_(3, 3) = dt_pred_; // vx with vx
+      Q_(4,1) = Q_(1,4); // vy with y. Symmetric
+      Q_(4,4) = dt_pred_; // vy with vy
+      Q_(5,2) = Q_(2,5); // vz with z. Symmetric
+      Q_(5,5) = dt_pred_; // vz with vz
+   }
 
    Q_ = q_*q_*Q_; // multiply by process noise variance
 }
 
 void KFTracker::setR(void)
 {
-   R_.resize(3,3);
-   R_ = Eigen::MatrixXd::Identity(3,3);
+   if (use_pos_and_vel_observations_) // observing position and velocity
+   {
+      R_.resize(6,6); R_ = Eigen::MatrixXd::Identity(6,6);
+   }
+   else// observing only position
+   {
+      R_.resize(3,3); R_ = Eigen::MatrixXd::Identity(3,3);
+   }
+
    R_ = r_*r_*R_; // multiply by observation noise variance
 }
 
 void KFTracker::setF(void)
 {
-   // This is for constant velocity model \in R^3
-
-   F_.resize(6,6);
-   F_ = Eigen::MatrixXd::Identity(6,6);
-   F_(0,3) = dt_pred_; // x - vx
-   F_(1,4) = dt_pred_; // y - vy
-   F_(2,5) = dt_pred_; // z - vz
+   if(use_constant_accel_model_)
+   {
+      // This is for constant acceleration model \in R^3
+      F_.resize(9,9); F_ = Eigen::MatrixXd::Identity(9,9);
+      F_.block<3,3>(0,3) = dt_pred_ * Eigen::MatrixXd::Identity(3,3);
+      F_.block<3,3>(0,6) = dt_pred_*dt_pred_ * Eigen::MatrixXd::Identity(3,3);
+      F_.block<3,3>(3,6) = dt_pred_ * Eigen::MatrixXd::Identity(3,3);
+   }
+   else
+   {
+      // This is for constant velocity model \in R^3
+      F_.resize(6,6);
+      F_ = Eigen::MatrixXd::Identity(6,6);
+      F_(0,3) = dt_pred_; // x - vx
+      F_(1,4) = dt_pred_; // y - vy
+      F_(2,5) = dt_pred_; // z - vz  
+   }
 }
 
 void KFTracker::setH(void)
 {
-   H_.resize(3,6);
-   H_ = Eigen::MatrixXd::Zero(3,6);
-   H_(0,0) = 1.0; // observing x
-   H_(1,1) = 1.0; // observing y
-   H_(2,2) = 1.0; // observing z
+   if(use_pos_and_vel_observations_) // position and velocity observations
+   {
+      H_.resize(6,6); H_ = Eigen::MatrixXd::Zero(6,6);
+      H_.block<3,3>(0,0) = Eigen::Matrix3d::Identity(3,3); // position observations
+      H_.block<3,3>(3,3) = Eigen::Matrix3d::Identity(3,3); // velocity observations
+   }
+   else // position aobservations
+   {
+      H_.resize(3,6);
+      H_ = Eigen::MatrixXd::Zero(3,6);
+      H_(0,0) = 1.0; // observing x
+      H_(1,1) = 1.0; // observing y
+      H_(2,2) = 1.0; // observing z  
+   }
 }
 
 void KFTracker::initP(void)
@@ -129,24 +185,32 @@ void KFTracker::initKF(void)
 {
    // initial state KF estimate
    kf_state_pred_.time_stamp = ros::Time::now();
-   kf_state_pred_.x = Eigen::MatrixXd::Zero(6,1); // position and velocity \in R^3
-   kf_state_pred_.x(3,0) = 0.0000001;
-   kf_state_pred_.x(4,0) = 0.0000001;
-   kf_state_pred_.x(5,0) = 0.0000001;
+   if(use_pos_and_vel_observations_)
+      kf_state_pred_.x = Eigen::MatrixXd::Zero(9,1); // position, velocity, and acceleration \in R^3
+   else   
+      kf_state_pred_.x = Eigen::MatrixXd::Zero(6,1); // position and velocity \in R^3
 
-   setQ(); // Initialize process noise covariance
-   initP();
-   setR(); // Initialize observation noise covariance
    setF(); // Initialize transition matrix
    setH(); // Initialize observation matrix
+   setQ(); // Initialize process noise covariance
+   setR(); // Initialize observation noise covariance
+   initP(); // Initialize state estimate covariance
 
    state_buffer_.clear(); // Clear state buffer
 
    z_meas_.time_stamp = ros::Time::now();
-   z_meas_.z.resize(3,1); 
-   z_meas_.z = Eigen::MatrixXd::Zero(3,1); //  measured position \in R^3
-   z_last_meas_ = z_meas_;
+   if(use_pos_and_vel_observations_)
+   {
+      z_meas_.z.resize(6,1); 
+      z_meas_.z = Eigen::MatrixXd::Zero(6,1); //  measured position and velocity \in R^3
+   }
+   else
+   {
+      z_meas_.z.resize(3,1); 
+      z_meas_.z = Eigen::MatrixXd::Zero(3,1); //  measured position \in R^3
+   } 
 
+   z_last_meas_ = z_meas_;
 
    ROS_INFO("KF is initialized.");
 }
@@ -290,7 +354,7 @@ void KFTracker::publishState(void)
    msg.pose.pose.position.x = kf_state_pred_.x(0);
    msg.pose.pose.position.y = kf_state_pred_.x(1);
    msg.pose.pose.position.z = kf_state_pred_.x(2);
-   msg.pose.pose.orientation.w = 1.0; // Idenetity orientation
+   msg.pose.pose.orientation.w = 1.0; // Idenetity orientation as we don't estimate it
 
    auto pxx = kf_state_pred_.P(0,0); auto pyy = kf_state_pred_.P(1,1); auto pzz = kf_state_pred_.P(2,2);
    msg.pose.covariance[0] = pxx; msg.pose.covariance[7] = pyy; msg.pose.covariance[14] = pzz;

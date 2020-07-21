@@ -53,6 +53,8 @@
     <node pkg="mavros_apriltag_tracking" name="kf_tracker_node" type="kf_tracker_node" output="screen">
         <remap from="measurement/pose" to="tag/pose"/>
         <param name="tracking_frame_id" value="$(arg drone_frame)"/>
+        <param name="use_pos_and_vel_observations" value="false"/>
+        <param name="use_constant_accel_model" value="true"/>
         <param name="dt_pred" value="0.05"/> <!-- rate of prediction step -->
         <param name="do_kf_update_step" value="true"/> <!-- IMPRTANT keep true-->
         <param name="q_std" value="1.0"/> <!-- Standard deviation of the process noise-->
