@@ -1,4 +1,9 @@
 # mavros_apriltag_tracking
+
+
+[![DOI](https://zenodo.org/badge/279731687.svg)](https://zenodo.org/badge/latestdoi/279731687)
+
+
 This package allows a PX4-powered drone to track a moving target (an AprilTag in this case) which is detected by a camera. Tag detection is done using `apriltag_ros` package. The target's position and velocity estimation is done using an implementaion of a Kalman filter based on a constant velocity model. The drone is controllerd using an implementation of a position controller which sends velocity commands to PX4. The detection and control are done with respect to the drone frame. So, errors caused by drifts in the local fixed frame can be avoided.
 
 **Kindly, give this repo a STAR if it helps you in your work**
@@ -112,3 +117,16 @@ Error signals are also published to the following topics. This helps you to plot
 ```
 
 You can use `rqt_plot` or `plotjuggler` to plot signals in realtime.
+
+# Citation
+If you use this package in an academic context, please cite it as follows
+```
+@misc{mohamed_abdelkader_2020_07,
+  author       = {Mohamed Abdelkader},
+  title        = {{mavros_apriltag_tracking - Vision-based target tracking for PX4-powered drones}},
+  month        = july,
+  year         = 2020,
+  doi          = {10.5281/zenodo.3959150 },
+  url          = {https://zenodo.org/badge/latestdoi/279731687}
+}
+```
