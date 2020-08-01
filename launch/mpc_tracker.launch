@@ -1,0 +1,68 @@
+<launch>
+
+    <!-- Set to true to track-->
+    <arg name="track_tag" default="true"/>
+
+    <arg name="drone_frame" default="drone_link"/>
+    <arg name="local_frame" default="map"/>
+
+    <!-- IMPORTANT. TF from drone to camera frames assuming camera is static-->
+    <node pkg="tf" type="static_transform_publisher" name="tf_drone_to_camera" args="0.1 0 -0.1 -1.57 0 -3.1415 $(arg drone_frame) cgo3_camera_optical_frame 33"/>
+
+    <include file="$(find mavros_apriltag_tracking)/launch/mavros.launch">
+        <arg name="gazebo_world" value="$(find mavros_apriltag_tracking)/worlds/empty.world"/>
+    </include>
+
+    <!-- AprilTag detector -->
+    <include file="$(find mavros_apriltag_tracking)/launch/continuous_detection.launch"/>
+
+    <node pkg="mavros_apriltag_tracking" name="target_pose_publisher_node" type="target_tf_publisher.py" output="screen">
+        <param name="tag_id" value="0"/>
+        <param name="drone_frame_id" value="/$(arg drone_frame)"/>
+        <param name="local_frame_id" value="/map"/>
+        <param name="tag_frame_id" value="/tag_0"/> <!-- Given taag frame_id-->
+        <param name="tags_topic" value="tag_detections"/> <!-- Given detected tag topic -->
+        <param name="target_rel_pose_topic" value="target/relative_pose"/> <!-- Desired topic for target relative pose-->
+        <param name="target_local_pose_topic" value="target/local_pose"/> <!-- Desired topic for target local pose-->
+    </node>
+
+    <!-- KF tracker-->
+    <node pkg="mavros_apriltag_tracking" name="kf_tracker_node" type="kf_tracker_node" output="screen">
+        <remap from="measurement/pose" to="target/local_pose"/>
+        <param name="tracking_frame_id" value="$(arg local_frame)"/>
+        <param name="use_pos_and_vel_observations" value="false"/>
+        <param name="use_constant_accel_model" value="false"/>
+        <param name="dt_pred" value="0.05"/> <!-- rate of prediction step -->
+        <param name="do_kf_update_step" value="true"/> <!-- IMPORTANT keep true-->
+        <param name="q_std" value="2.0"/> <!-- Standard deviation of the process noise-->
+        <param name="r_std" value="0.1"/> <!-- Standard deviation of the observation noise-->
+        <param name="measurement_off_time" value="2.0"/> <!-- Maximum time (seconds) with no measurement before stopping the filter -->
+        <param name="print_debug_msg" value="false"/>
+    </node>
+
+    <!-- MPC tracker -->
+    <node pkg="mavros_apriltag_tracking" type="mpc_tracker_node" name="mpc_tracker_node" output="screen">
+      <param name="debug" value="false"/>
+      <param name="mpc_window" value="5"/>
+      <param name="state_weight" value="0.5"/>
+      <param name="input_weight" value="0.5"/>
+      <param name="maxVel" value="2.5"/>
+      <param name="alt_above_target" value="2.0"/>
+      <param name="takeoff_alt" value="3.0"/>
+      <param name="commander_rate" value="0.05"/>
+    </node>
+
+
+    <arg name="husky_laser_enabled" default="true"/>
+    <arg name="husky_kinect_enabled" default="false"/>
+
+    <include file="$(find husky_gazebo)/launch/spawn_husky.launch">
+        <arg name="x" value="2.0"/>
+        <arg name="y" value="-2.0"/>
+        <arg name="laser_enabled" value="$(arg husky_laser_enabled)"/>
+        <arg name="kinect_enabled" value="$(arg husky_kinect_enabled)"/>
+    </include>
+
+    <!-- Rviz -->
+    <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find mavros_apriltag_tracking)/rviz/rviz.rviz" />
+</launch>

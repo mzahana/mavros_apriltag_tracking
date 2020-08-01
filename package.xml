@@ -73,9 +73,15 @@
   <build_depend>std_msgs</build_depend>
   <exec_depend>std_msgs</exec_depend>
 
-  <build_depend> eigen_catkin</build_depend>
+  <!--build_depend> eigen_catkin</build_depend-->
+  <!--build_depend>Eigen3</build_depend-->
+  <!--build_depend>OsqpEigen</build_depend-->
+  <!--build_depend>osqp</build_depend-->
+  
 
   <exec_depend>gazebo_ros</exec_depend>
+
+  <build_depend>nlopt</build_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
