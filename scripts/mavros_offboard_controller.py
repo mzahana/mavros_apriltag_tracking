@@ -233,6 +233,9 @@ class Commander:
         # Instantiate a setpoint topic structure
         self.setpoint_ = PositionTarget()
 
+        # Activate/deactivate controller
+        self.is_ctrl_active_ = True
+
         # use velocity and yaw setpoints
         self.setBodyVelMask()
 
@@ -284,6 +287,12 @@ class Commander:
         # Service for autoland
         rospy.Service('auto_land', Empty, self.autoLand)
 
+        # Service to activate controller (publish setpoints)
+        rospy.Service('controller/activate', Empty, self.activateCtrl)
+
+        # Service to deactivate controller (publish setpoints)
+        rospy.Service('controller/deactivate', Empty, self.deactivateCtrl)
+
         # Service for holding at current position
         # rospy.Service('hold', Empty, self.hold)
 
@@ -294,6 +303,16 @@ class Commander:
 
     #     self.setLocalPositionMask()
     #     return EmptyResponse()
+
+    def activateCtrl(self, req):
+        self.is_ctrl_active_ = True
+        rospy.loginfo("PID controller is activated and setpoint will be published")
+        return EmptyResponse()
+
+    def deactivateCtrl(self, req):
+        self.is_ctrl_active_ = False
+        rospy.logwarn("PID controller is deactivated and setpoint will not be published")
+        return EmptyResponse()
 
     def bodyVelCallback(self, msg):
         self.body_vel_ = msg
@@ -388,7 +407,8 @@ class Commander:
 
         self.setpoint_.yaw = self.yaw_setpoint_ * pi / 180. # convert to radians
 
-        self.setpoint_pub_.publish(self.setpoint_)
+        if self.is_ctrl_active_:
+            self.setpoint_pub_.publish(self.setpoint_)
 
 #####################################################################################
 """
@@ -409,6 +429,9 @@ class Tracker:
         self.relative_ySp_  = 0.0
         self.relative_zSp_  = 0.0
 
+        # Takeoff altitude
+        self.takeoff_alt_ = rospy.get_param("~tracker/takeof_alt", 3.0)
+
         # Flag to select between local vs. relative tracking
         # set False for relative target tracking
         self.local_tracking_ = None
@@ -418,7 +441,7 @@ class Tracker:
 
         # Controller object to calculate velocity commands
         self.controller_ = PositionController()
-
+        
         # Subscriber for user setpoints (local position)
         rospy.Subscriber('setpoint/local_pos', Point, self.localPosSpCallback)
 
@@ -436,6 +459,29 @@ class Tracker:
 
         # Publisher for position error between drone and target
         self.relativePos_err_pub_ = rospy.Publisher('analysis/relative_pos_err', PointStamped, queue_size=10)
+
+        # Takeoff service
+        rospy.Service('tracker/takeoff', Empty, self.takeofCallback)
+
+    def takeofCallback(self, req):
+        """
+        Callback of takeoff service
+        """
+        self.local_xSp_ = self.commander_.drone_pos_.x
+        self.local_ySp_ = self.commander_.drone_pos_.y
+        self.local_zSp_ = self.commander_.drone_pos_.z + self.takeoff_alt_
+        
+        # In case we are switching from relative to local tracking
+        # to avoid jumps caused by accumulation in the integrators
+        if not self.local_tracking_ or self.local_tracking_ is None:
+            self.controller_.resetIntegrators()
+            self.local_tracking_ = True
+
+        self.commander_.fcu_mode_.setArm()
+        self.commander_.fcu_mode_.setOffboardMode()
+
+
+        return EmptyResponse()
 
     def computeControlOutput(self):
         if self.local_tracking_:
@@ -546,5 +592,4 @@ if __name__ == '__main__':
         tracker.computeControlOutput()
         tracker.commander_.publishSetpoint()
         tracker.publishErrorSignals()
-        #cmd.publishSetpoint()
         loop.sleep()
