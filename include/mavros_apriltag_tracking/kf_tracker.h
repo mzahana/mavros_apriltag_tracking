@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include "mavros_apriltag_tracking/KFState.h"
 
 #include <stdio.h>
 #include <cstdlib>
@@ -169,7 +170,8 @@ private:
     */
    void publishState(void);
 
-   ros::Publisher state_pub_;
+   ros::Publisher posState_pub_; /** Publisher for position part only */
+   ros::Publisher kfState_pub_; /** Publisher for the entire KF state */
    ros::Subscriber pose_sub_; /**< Subscriber to measurments. */
    ros::Timer kf_loop_timer_;
 

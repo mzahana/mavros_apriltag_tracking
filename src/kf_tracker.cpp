@@ -67,7 +67,8 @@ debug_(false)
 
    pose_sub_ =  nh_.subscribe("measurement/pose", 1, &KFTracker::poseCallback, this);
 
-   state_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("kf/estimate", 1);
+   posState_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>("kf/estimate", 1);
+   kfState_pub_ = nh_.advertise<mavros_apriltag_tracking::KFState>("kf/state", 1);
    
 }
 
@@ -358,7 +359,18 @@ void KFTracker::publishState(void)
 
    auto pxx = kf_state_pred_.P(0,0); auto pyy = kf_state_pred_.P(1,1); auto pzz = kf_state_pred_.P(2,2);
    msg.pose.covariance[0] = pxx; msg.pose.covariance[7] = pyy; msg.pose.covariance[14] = pzz;
-   state_pub_.publish(msg);
+   posState_pub_.publish(msg);
+
+   mavros_apriltag_tracking::KFState kfState_msg;
+   kfState_msg.header.stamp = kf_state_pred_.time_stamp;
+   kfState_msg.position.x = kf_state_pred_.x(0);
+   kfState_msg.position.y = kf_state_pred_.x(1);
+   kfState_msg.position.z = kf_state_pred_.x(2);
+   kfState_msg.velocity.x = kf_state_pred_.x(3);
+   kfState_msg.velocity.y = kf_state_pred_.x(4);
+   kfState_msg.velocity.z = kf_state_pred_.x(5);
+   // TODO: Fill covariance matrix
+   kfState_pub_.publish(kfState_msg);
 }
 
 void KFTracker::filterLoop(const ros::TimerEvent& event)
