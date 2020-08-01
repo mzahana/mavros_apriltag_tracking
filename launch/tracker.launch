@@ -12,7 +12,33 @@
         <arg name="gazebo_world" value="$(find mavros_apriltag_tracking)/worlds/empty.world"/>
     </include>
 
+    <!-- AprilTag detector: by apriltag_ros pkg -->
     <include file="$(find mavros_apriltag_tracking)/launch/continuous_detection.launch"/>
+
+    <!-- Publishes relative and local poses of detected target-->
+    <node pkg="mavros_apriltag_tracking" name="target_pose_publisher_node" type="target_pose_publisher.py" output="screen">
+        <param name="tag_id" value="0"/>
+        <param name="drone_frame_id" value="/$(arg drone_frame)"/>
+        <param name="local_frame_id" value="/map"/>
+        <param name="tag_frame_id" value="/tag_0"/> <!-- Given taag frame_id-->
+        <param name="tags_topic" value="tag_detections"/> <!-- Given detected tag topic -->
+        <param name="target_rel_pose_topic" value="target/relative_pose"/> <!-- Desired topic for target relative pose-->
+        <param name="target_local_pose_topic" value="target/local_pose"/> <!-- Desired topic for target local pose-->
+    </node>
+
+    <!-- KF tracker: Estimates target's position and velocity-->
+    <node pkg="mavros_apriltag_tracking" name="kf_tracker_node" type="kf_tracker_node" output="screen">
+        <remap from="measurement/pose" to="target/relative_pose"/>
+        <param name="tracking_frame_id" value="$(arg drone_frame)"/>
+        <param name="use_pos_and_vel_observations" value="false"/> <!-- not implemented yet. Keep false for now! -->
+        <param name="use_constant_accel_model" value="false"/>
+        <param name="dt_pred" value="0.05"/> <!-- rate of prediction step -->
+        <param name="do_kf_update_step" value="true"/> <!-- IMPORTANT keep true-->
+        <param name="q_std" value="2.0"/> <!-- Standard deviation of the process noise-->
+        <param name="r_std" value="0.1"/> <!-- Standard deviation of the observation noise-->
+        <param name="measurement_off_time" value="2.0"/> <!-- Maximum time (seconds) with no measurement before stopping the filter -->
+        <param name="print_debug_msg" value="false"/>
+    </node>
 
     <!-- Position controller -->
     <node pkg="mavros_apriltag_tracking" name="mavros_offboard_controller_node" type="mavros_offboard_controller.py" output="screen">
@@ -25,7 +51,7 @@
         <param name="vertical_controller/kI" value="0.01"/>
 
         <!-- Maximum horizontal vlocity magnitude -->
-        <param name="horizontal_controller/vMAX" value="2.0"/>
+        <param name="horizontal_controller/vMAX" value="10.0"/>
         <!-- Maximum verical vlocity magnitude -->
         <param name="vertical_controller/vUpMAX" value="1.0"/>
         <param name="vertical_controller/vDownMAX" value="0.5"/>
@@ -35,38 +61,16 @@
         Takes pose of detected tag and publishes corresponding relative position setpoints to the controller
     -->
     <node if="$(arg track_tag)" pkg="mavros_apriltag_tracking" name="apriltag_setpoint_publisher_node" type="apriltag_setpoint_publisher.py" output="screen">
-        <!-- Desired tag id to be tracked -->
-        <param name="tag_id" value="0"/>
-        <!-- Drone's frame name for transformation-->
-        <param name="drone_frame_id" value="/$(arg drone_frame)"/>
-        <!-- Tag's frame name for transformation-->
-        <param name="tag_frame_id" value="/tag_0"/>
-        <!-- Topics on which tags poses are published -->
-        <param name="tags_topic" value="tag_detections"/>
         <!-- Controller setpoint topic-->
         <param name="setpoint_topic" value="setpoint/relative_pos"/>
         <!-- Desired alttitude above tag in meters. Should be positive-->
         <param name="alt_from_tag" value="3.0"/>
     </node>
 
-    <!-- KF tracker-->
-    <node pkg="mavros_apriltag_tracking" name="kf_tracker_node" type="kf_tracker_node" output="screen">
-        <remap from="measurement/pose" to="tag/pose"/>
-        <param name="tracking_frame_id" value="$(arg drone_frame)"/>
-        <param name="use_pos_and_vel_observations" value="false"/>
-        <param name="use_constant_accel_model" value="true"/>
-        <param name="dt_pred" value="0.05"/> <!-- rate of prediction step -->
-        <param name="do_kf_update_step" value="true"/> <!-- IMPRTANT keep true-->
-        <param name="q_std" value="1.0"/> <!-- Standard deviation of the process noise-->
-        <param name="r_std" value="0.1"/> <!-- Standard deviation of the observation noise-->
-        <param name="measurement_off_time" value="2.0"/> <!-- Maximum time (seconds) with no measurement before stopping the filter -->
-        <param name="print_debug_msg" value="false"/>
-    </node>
 
-
+    <!-- Husly simulation -->
     <arg name="husky_laser_enabled" default="true"/>
     <arg name="husky_kinect_enabled" default="false"/>
-
     <include file="$(find husky_gazebo)/launch/spawn_husky.launch">
         <arg name="x" value="2.0"/>
         <arg name="y" value="2.0"/>
