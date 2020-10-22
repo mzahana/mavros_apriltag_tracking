@@ -53,8 +53,8 @@ class SetpointPublisher:
         rospy.Subscriber("kf/estimate", PoseWithCovarianceStamped, self.kfCallback)
 
     def kfCallback(self, msg):
-        ex = -msg.pose.pose.position.y
-        ey = msg.pose.pose.position.x
+        ex = msg.pose.pose.position.x
+        ey = msg.pose.pose.position.y
         ez = msg.pose.pose.position.z + self.alt_from_tag_
         sp_msg = Point()
         sp_msg.x = ex

@@ -75,7 +75,6 @@
         <arg name="x" value="2.0"/>
         <arg name="y" value="2.0"/>
         <arg name="laser_enabled" value="$(arg husky_laser_enabled)"/>
-        <arg name="kinect_enabled" value="$(arg husky_kinect_enabled)"/>
     </include>
 
     <!-- Rviz -->
