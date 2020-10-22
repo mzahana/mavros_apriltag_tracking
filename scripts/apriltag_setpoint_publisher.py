@@ -66,8 +66,8 @@ class SetpointPublisher:
         rospy.Subscriber(self.tags_topic_, AprilTagDetectionArray, self.tagsCallback)
 
     def kfCallback(self, msg):
-        ex = -msg.pose.pose.position.y #-trans[1]
-        ey = msg.pose.pose.position.x #trans[0]
+        ex = msg.pose.pose.position.x
+        ey = msg.pose.pose.position.y
         ez = msg.pose.pose.position.z + self.alt_from_tag_
         sp_msg = Point()
         sp_msg.x = ex
