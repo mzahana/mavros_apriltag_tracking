@@ -20,14 +20,14 @@ This package is tested on Ubuntu 18 + ROS Melodic
     cd ~/catkin_ws/src
     git clone https://github.com/mzahana/mavros_apriltag_tracking.git
     ```
-* Use the `install/setup,sh` script to do the installation
+* Use the `install/setup.sh` script to do the installation
     ```sh
     cd ~/catkin_ws/src/mavros_apriltag_tracking/install
     ./setup.sh
     ```
 * Copy the modified `typhoon_h480` model to `/home/arrow/Firmware/Tools/sitl_gazebo/models`
     ```sh
-    cp -R ~/catkin_ws/src/mavros_apriltag_tracking/models/typhoon_h480 ~/Firmware/Tools/sitl_gazebo/models/husky.urdf.xacro 
+    cp -R ~/catkin_ws/src/mavros_apriltag_tracking/models/typhoon_h480 ~/Firmware/Tools/sitl_gazebo/models/
     ```
 * Copy the modified Husky simulation model. **You need sudo for this one**
 ```sh
