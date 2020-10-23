@@ -274,7 +274,8 @@ void KFTracker::update(void)
       //for (std::vector<kf_state>::iterator it = state_buffer_.end() ; it != state_buffer_.begin(); it--)
       for (int i=0; i < state_buffer_.size(); i++)
       {
-         if( (state_buffer_[i].time_stamp.toSec() - current_z.time_stamp.toSec()) > dt_pred_)
+         auto dt = state_buffer_[i].time_stamp.toSec() - current_z.time_stamp.toSec();
+         if( dt > dt_pred_ and dt < 2*dt_pred_)
          {
             kf_state_pred_.time_stamp = state_buffer_[i].time_stamp;
             kf_state_pred_.x = state_buffer_[i].x;
@@ -311,6 +312,13 @@ void KFTracker::update(void)
       // z_last_meas_.z = z.z;
       z_last_meas_.time_stamp = current_z.time_stamp;
       z_last_meas_.z = current_z.z;
+
+      //std::cout << "Difference between current time and accepted measurement: " << (ros::Time::now().toSec() - current_z.time_stamp.toSec()) / dt_pred_ << std::endl;
+
+      // Project state estimate for the remaining time
+      int N = (int) (ros::Time::now().toSec() - current_z.time_stamp.toSec());
+      for (int i=0; i<N; i++)
+         predict();
    }
    else
    {
