@@ -8,6 +8,12 @@
     <!-- IMPORTANT. TF from drone to camera frames assuming camera is static-->
     <node pkg="tf" type="static_transform_publisher" name="tf_drone_to_camera" args="0.1 0 -0.1 -1.57 0 -3.1415 $(arg drone_frame) cgo3_camera_optical_frame 33"/>
 
+    <!-- World to map -->
+    <node pkg="tf" type="static_transform_publisher" name="tf_world_to_map" args="0 0 0 0 0 0 world map 33"/>
+
+    <!-- World to odom -->
+    <node pkg="tf" type="static_transform_publisher" name="tf_world_to_odom" args="0 0 0 0 0 0 map odom 33"/>
+
     <include file="$(find mavros_apriltag_tracking)/launch/mavros.launch">
         <arg name="gazebo_world" value="$(find mavros_apriltag_tracking)/worlds/empty.world"/>
     </include>
