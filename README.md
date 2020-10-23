@@ -50,6 +50,12 @@ sudo cp ~/catkin_ws/src/mavros_apriltag_tracking/models/custom_husky/husky.urdf.
     ```sh
     roslaunch mavros_apriltag_tracking tracker.launch
     ```
+
+* All steps required to set a takeoff position, bringing camera down, arming and setting OFFBOARD mode, and moving the Husky are available in a shell script which can be run using `rosrun mavros_apriltag_tracking start_tracking.sh`
+
+THAT IS IT!
+
+The steps in the `start_tracking.sh` script are explained in details below:
 * Bring the drone above and close to the tag by publishing one message to the `/setpoint/local_pos` 
     ```sh
     rostopic pub --once /setpoint/local_pos geometry_msgs/Point "x: 0.0
@@ -88,7 +94,7 @@ angular:
   x: 0.0
   y: 0.0
   z: 0.4"
-```
+``` 
 
 Look at the `launch/tracker.launch` file and change parameters as needed.
 
