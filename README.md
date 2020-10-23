@@ -13,7 +13,19 @@ Video:
 [![mavros_apriltag_tracking](https://img.youtube.com/vi/5bqOWKYBr0k/0.jpg)](https://youtu.be/5bqOWKYBr0k "mavros_apriltag_tracking")
 
 # Installation
-This package is tested on Ubuntu 18 + ROS Melodic
+This package is tested with Ubuntu 18 + ROS Melodic + PX4 10.1
+
+## Docker image
+The easiest way to test this package is through a ready Docker image prepared for this project which is available [here](https://hub.docker.com/r/mzahana/px4_vehicle_tracking)
+
+Use [docker_px4_vehicle_tracking.sh](https://github.com/mzahana/containers/blob/master/scripts/docker_px4_vehicle_tracking.sh) script to automatically pull and run the docker image. Don't forget to make it executable using `chmod +x docker_px4_vehicle_tracking.sh` 
+```sh
+./docker_px4_vehicle_tracking.sh <optional_container_name>
+```
+Once logged into the container terminal, proceed to the **Simulation**
+seciton.
+
+## Normal installation
 
 * Clone this package into your `~/catkin_ws/src` folder
     ```sh
