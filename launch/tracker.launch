@@ -16,6 +16,7 @@
 
     <include file="$(find mavros_apriltag_tracking)/launch/mavros.launch">
         <arg name="gazebo_world" value="$(find mavros_apriltag_tracking)/worlds/empty.world"/>
+        <arg name="verbose" value="true"/>
     </include>
 
     <include file="$(find mavros_apriltag_tracking)/launch/continuous_detection.launch"/>
