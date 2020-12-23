@@ -4,7 +4,7 @@
 echo "Publishing local setpoint for the drone ..."
 rostopic pub --once /setpoint/local_pos geometry_msgs/Point "x: 0.0
 y: 0.0
-z: 3.0"
+z: 4.0"
 
 # Bring camera down
 echo "Bringing camera down ..."
