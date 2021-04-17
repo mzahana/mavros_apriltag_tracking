@@ -65,9 +65,9 @@ The steps in the `start_tracking.sh` script are explained in details below:
 * Make the camera face downward (pitch rotation of -90 degrees)
     ```sh
     rostopic pub --once /mavros/mount_control/command mavros_msgs/MountControl "header:
-    seq: 0
-    stamp: {secs: 0, nsecs: 0}
-    frame_id: ''
+      seq: 0
+      stamp: {secs: 0, nsecs: 0}
+      frame_id: ''
     mode: 2
     pitch: -90.0
     roll: 0.0
